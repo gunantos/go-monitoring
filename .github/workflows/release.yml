@@ -3,8 +3,8 @@ name: Build & Release Monitoring
 on:
   push:
     tags:
-      - 'v*.*.*'
-  workflow_dispatch:
+      - 'v*.*.*'  # Trigger saat push tag misal v1.0.0
+  workflow_dispatch:  # Bisa trigger manual
 
 jobs:
   build:
@@ -48,6 +48,7 @@ jobs:
     name: Create GitHub Release
     needs: build
     runs-on: ubuntu-latest
+
     steps:
       - name: Download artifacts
         uses: actions/download-artifact@v4
@@ -61,11 +62,11 @@ jobs:
           tag_name: ${{ github.ref_name }}
           name: Release ${{ github.ref_name }}
         env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GITHUB_TOKEN: ${{ secrets.PERSONAL_GITHUB_TOKEN }}
 
       - name: Upload release assets
         uses: softprops/action-gh-release@v1
         with:
-          files: ./release/*
+          files: ./release/**/*
         env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GITHUB_TOKEN: ${{ secrets.PERSONAL_GITHUB_TOKEN }}
