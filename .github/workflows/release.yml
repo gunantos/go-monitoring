@@ -1,37 +1,72 @@
-name: Multi-Platform Build & Release
+name: Build & Release Monitoring
 
+# Bisa di-trigger otomatis saat push tag atau manual
 on:
   push:
     tags:
-      - 'v*.*.*'
+      - 'v*.*.*'  # Misal v1.0.0
+  workflow_dispatch:  # Trigger manual dari GitHub UI
 
 jobs:
   build:
+    name: Build Multi-Platform
     runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        goos: [windows, linux, darwin]
+        goarch: [amd64, arm64]
 
     steps:
-      - name: Checkout repo
+      - name: Checkout repository
         uses: actions/checkout@v3
 
-      - name: Setup Go
+      - name: Set up Go
         uses: actions/setup-go@v4
         with:
           go-version: '1.23.4'
+
       - name: Install dependencies
         run: go mod tidy
-      - name: Build Linux
-        run: |
-          GOOS=linux GOARCH=amd64 go build -o monitoring-linux main.go
 
-      - name: Build Windows
+      - name: Build binary
         run: |
-          GOOS=windows GOARCH=amd64 go build -o monitoring-windows.exe main.go
+          echo "Building for ${{ matrix.goos }}/ ${{ matrix.goarch }}"
+          OUTPUT=monitoring-${{ matrix.goos }}-${{ matrix.goarch }}
+          if [ "${{ matrix.goos }}" = "windows" ]; then
+            OUTPUT=${OUTPUT}.exe
+          fi
+          GOOS=${{ matrix.goos }} GOARCH=${{ matrix.goarch }} go build -o $OUTPUT main.go
 
-      - name: Create GitHub Release
+      - name: Upload artifacts
+        uses: actions/upload-artifact@v3
+        with:
+          name: monitoring-${{ matrix.goos }}-${{ matrix.goarch }}
+          path: |
+            monitoring-${{ matrix.goos }}-${{ matrix.goarch }}
+            monitoring-${{ matrix.goos }}-${{ matrix.goarch }}.exe
+
+  release:
+    name: Create GitHub Release
+    needs: build
+    runs-on: ubuntu-latest
+    steps:
+      - name: Download artifacts
+        uses: actions/download-artifact@v3
+        with:
+          path: ./release
+
+      - name: Create Release
+        id: create_release
         uses: softprops/action-gh-release@v1
         with:
-          files: |
-            monitoring-linux
-            monitoring-windows.exe
+          tag_name: ${{ github.ref_name }}
+          name: Release ${{ github.ref_name }}
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Upload release assets
+        uses: softprops/action-gh-release@v1
+        with:
+          files: ./release/*
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
