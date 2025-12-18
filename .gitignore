@@ -1,0 +1,17 @@
+# Binaries
+*.exe
+*.exe~
+*.dll
+*.so
+*.dylib
+monitoring
+
+# Build output
+bin/
+
+# Vendor
+vendor/
+
+# IDE
+.vscode/
+.idea/
